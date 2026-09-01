@@ -285,6 +285,12 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
     private fun applyImmersiveMode() {
         val decor = decorView ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Let the window extend under the system bars. This is the WindowInsetsController
+            // equivalent of SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN / LAYOUT_HIDE_NAVIGATION -- without it
+            // the window is still inset for the (hidden) status bar, so the page loses that height
+            // for nothing. On a 300dpi device that is 73px, about 39 CSS px, which is enough to
+            // push a dashboard that would otherwise fit into scrolling.
+            WindowCompat.setDecorFitsSystemWindows(window, !configuration.fullScreen)
             val controller = WindowCompat.getInsetsController(window, decor)
             if (configuration.fullScreen) {
                 controller.systemBarsBehavior =
