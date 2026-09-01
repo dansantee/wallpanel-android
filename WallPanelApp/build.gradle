@@ -22,8 +22,6 @@ plugins {
     id 'kotlin-kapt' // Allows for Kotlin annotation processors
     //id 'androidx.navigation.safeargs.kotlin'
     //id 'dagger.hilt.android.plugin'
-    id 'com.google.gms.google-services'
-    id 'com.google.firebase.crashlytics'
 }
 
 def versionMajor = 0
@@ -31,34 +29,18 @@ def versionMinor = 12
 def versionPatch = 0
 def versionBuild = 0 // bump for dog food builds, public betas, etc.
 
-def CODE() {
+// local.properties is developer-machine config and is NOT present in a fresh clone.
+// Gradle evaluates EVERY product flavor block regardless of which flavor is being assembled, so
+// these lookups must never throw -- previously they called properties.load() unconditionally and a
+// clean clone failed to configure before compiling a single line.
+def localProperty(String key, String fallback) {
+    def propertiesFile = project.rootProject.file('local.properties')
+    if (!propertiesFile.exists()) {
+        return fallback
+    }
     Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    return properties.getProperty("code")
-}
-
-def HASS_URL() {
-    Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    return properties.getProperty("hassUrl")
-}
-
-def BROKER() {
-    Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    return properties.getProperty("broker")
-}
-
-def BROKER_PASS() {
-    Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    return properties.getProperty("brokerPass")
-}
-
-def BROKER_USERNAME() {
-    Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    return properties.getProperty("brokerUsername")
+    propertiesFile.withInputStream { properties.load(it) }
+    return properties.getProperty(key) ?: fallback
 }
 
 android {
@@ -67,7 +49,6 @@ android {
         correctErrorTypes = true
     }
     compileSdkVersion 33
-    buildToolsVersion "30.0.3"
     defaultConfig {
         applicationId "xyz.wallpanel.app"
         minSdkVersion 19
@@ -105,11 +86,11 @@ android {
             buildConfigField "String", BASE_ENVIRONMENT, '"DEV_ENVIRONMENT"'
             applicationId "xyz.wallpanel.app"
             versionName "${versionMajor}.${versionMinor}.${versionPatch} Build ${versionBuild}-DEV"
-            buildConfigField 'Integer', 'CODE', CODE()
-            buildConfigField 'String', 'HASS_URL', "\"" + HASS_URL() +"\""
-            buildConfigField 'String', 'BROKER', "\"" + BROKER() +"\""
-            buildConfigField 'String', 'BROKER_PASS', "\"" + BROKER_PASS() +"\""
-            buildConfigField 'String', 'BROKER_USERNAME', "\"" + BROKER_USERNAME() +"\""
+            buildConfigField 'Integer', 'CODE', localProperty('code', '1234')
+            buildConfigField 'String', 'HASS_URL', "\"" + localProperty('hassUrl', '') + "\""
+            buildConfigField 'String', 'BROKER', "\"" + localProperty('broker', '') + "\""
+            buildConfigField 'String', 'BROKER_PASS', "\"" + localProperty('brokerPass', '') + "\""
+            buildConfigField 'String', 'BROKER_USERNAME', "\"" + localProperty('brokerUsername', '') + "\""
         }
         qa {
             dimension "default"
@@ -167,7 +148,6 @@ dependencies {
 
     // LiveData + ViewModel
     implementation "androidx.lifecycle:lifecycle-extensions:2.2.0"
-    implementation 'com.google.firebase:firebase-analytics:21.1.1'
     implementation "androidx.lifecycle:lifecycle-reactivestreams-ktx:$versions.lifecycle"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$versions.lifecycle"
 
@@ -177,14 +157,13 @@ dependencies {
     implementation "com.squareup.retrofit2:adapter-rxjava2:$versions.retrofit"
 
     // OKHttp
-    implementation 'com.squareup.okhttp3:logging-interceptor:3.4.1'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.13'
     implementation 'com.squareup.okhttp3:okhttp:3.12.13'
 
     // Dagger
     implementation "com.google.dagger:dagger:$versions.dagger"
     kapt "com.google.dagger:dagger-compiler:$versions.dagger"
     implementation "com.google.dagger:dagger-android-support:$versions.dagger"
-    kapt "com.google.dagger:dagger-compiler:$versions.dagger"
     implementation "com.google.dagger:dagger-android:$versions.dagger"
     kapt "com.google.dagger:dagger-android-processor:$versions.dagger"
 
@@ -197,40 +176,21 @@ dependencies {
     // Logging
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
-    // Picasso image loading
-    implementation 'com.squareup.picasso:picasso:2.71828'
-
     // Glide for image loading
     implementation 'com.github.bumptech.glide:glide:4.12.0'
     kapt 'com.github.bumptech.glide:compiler:4.12.0'
 
-    // debugImplementation because LeakCanary should only run in debug builds.
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.9.1'
+    // LeakCanary removed from debug builds: this is a wall-panel app that is sideloaded as a
+    // prodDebug build, and LeakCanary posts "found N retained objects" notifications, adds its own
+    // launcher icon and periodically forces GC -- all of which are noise on a kiosk device.
+    // The release-only LeakCanary artifacts below are inert unless explicitly triggered.
     // LeakCanary for releases
     releaseImplementation 'com.squareup.leakcanary:leakcanary-android-release:2.9.1'
     // Optional: detect retained objects. This helps but is not required.
     releaseImplementation 'com.squareup.leakcanary:leakcanary-object-watcher-android:2.9.1'
 
-    //  _____ _          _
-    // |  ___(_)_ __ ___| |__   __ _ ___  ___
-    // | |_  | | '__/ _ \ '_ \ / _` / __|/ _ \
-    // |  _| | | | |  __/ |_) | (_| \__ \  __/
-    // |_|   |_|_|  \___|_.__/ \__,_|___/\___|
-    //
-    implementation 'com.google.firebase:firebase-core:21.1.1'
-
-    // Import the Firebase BoM (see: https://firebase.google.com/docs/android/learn-more#bom)
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation platform('com.google.firebase:firebase-bom:29.3.1')
-
-    // For an optimal experience using Crashlytics, add the Firebase SDK
-    // for Google Analytics. This is recommended, but not required.
-    implementation 'com.google.firebase:firebase-analytics'
-    // Firebase Crashlytics (Kotlin)
-    implementation 'com.google.firebase:firebase-crashlytics-ktx'
-
     // Unit tests
-    testImplementation 'junit:junit:4.+'
+    testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     androidTestImplementation 'androidx.test:runner:1.4.0'
@@ -238,19 +198,3 @@ dependencies {
 
 }
 
-configurations.all {
-    resolutionStrategy {
-        force "com.android.support:appcompat-v7:$versions.support"
-    }
-}
-
-/*configurations.all {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        def requested = details.requested
-        if (requested.group == 'com.android.support') {
-            if (!requested.name.startsWith("multidex")) {
-                details.useVersion '25.3.0'
-            }
-        }
-    }
-}*/

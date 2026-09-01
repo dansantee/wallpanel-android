@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.WindowManager
 import xyz.wallpanel.app.R
 import xyz.wallpanel.app.persistence.Configuration
 import xyz.wallpanel.app.utils.DialogUtils
@@ -37,6 +38,14 @@ class SettingsActivity : DaggerAppCompatActivity() {
 
     public override fun onCreate(savedInstance: Bundle?) {
         super.onCreate(savedInstance)
+
+        // Show over the keyguard, exactly as BaseBrowserActivity does. Without this, opening
+        // settings from the panel stops occluding the lock screen and the keyguard pops to the
+        // front -- the user has to dismiss it to reach the settings screen that is already
+        // open behind it. Only the browser activity carried these flags.
+        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
 
         setContentView(R.layout.activity_settings)
 
