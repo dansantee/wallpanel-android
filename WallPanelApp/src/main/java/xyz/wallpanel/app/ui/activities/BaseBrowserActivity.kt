@@ -30,6 +30,10 @@ import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.android.support.DaggerAppCompatActivity
 import timber.log.Timber
@@ -146,6 +150,8 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
 
         decorView = window.decorView
+        applyImmersiveMode()
+        installImmersiveInsetsListener()
 
         lifecycle.addObserver(dialogUtils)
 
@@ -156,6 +162,7 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        applyImmersiveMode()
         val filter = IntentFilter()
         filter.addAction(BROADCAST_ACTION_LOAD_URL)
         filter.addAction(BROADCAST_ACTION_JS_EXEC)
@@ -251,18 +258,64 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        val visibility: Int
-        if (hasFocus && configuration.fullScreen) {
-            visibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
-            decorView?.systemUiVisibility = visibility
-        } else if (hasFocus) {
-            visibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_VISIBLE
-            decorView?.systemUiVisibility = visibility
+        if (hasFocus) {
+            applyImmersiveMode()
+        }
+    }
+
+    /**
+     * Hide (or restore) the status and navigation bars.
+     *
+     * On API 30+ this uses WindowInsetsController. The legacy SYSTEM_UI_FLAG_* path is kept for
+     * older devices, where it is still the only option.
+     *
+     * Why this is not just called from onWindowFocusChanged: on Android 11+ IMMERSIVE_STICKY is
+     * translated into BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE, and the system will show the bars
+     * transiently in response to touch input -- including the touch that wakes the screen. The
+     * app's requested visibility never changes, so nothing re-hides them until they time out on
+     * their own about a second later. On a wall panel that reads as the nav bar flashing up on
+     * every double-tap-to-wake. See the insets listener installed in onCreate, which re-hides
+     * them as soon as the system reveals them.
+     */
+    private fun applyImmersiveMode() {
+        val decor = decorView ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = WindowCompat.getInsetsController(window, decor)
+            if (configuration.fullScreen) {
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            decor.systemUiVisibility = if (configuration.fullScreen) {
+                (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+            } else {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_VISIBLE
+            }
+        }
+    }
+
+    /**
+     * Re-hide the system bars the moment the system shows them transiently (typically the touch
+     * that wakes the display). Without this the bars linger for their own timeout.
+     */
+    private fun installImmersiveInsetsListener() {
+        val decor = decorView ?: return
+        ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
+            if (configuration.fullScreen &&
+                insets.isVisible(WindowInsetsCompat.Type.systemBars())
+            ) {
+                applyImmersiveMode()
+            }
+            insets
         }
     }
 
