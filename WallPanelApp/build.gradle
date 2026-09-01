@@ -201,8 +201,10 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.12.0'
     kapt 'com.github.bumptech.glide:compiler:4.12.0'
 
-    // debugImplementation because LeakCanary should only run in debug builds.
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.9.1'
+    // LeakCanary removed from debug builds: this is a wall-panel app that is sideloaded as a
+    // prodDebug build, and LeakCanary posts "found N retained objects" notifications, adds its own
+    // launcher icon and periodically forces GC -- all of which are noise on a kiosk device.
+    // The release-only LeakCanary artifacts below are inert unless explicitly triggered.
     // LeakCanary for releases
     releaseImplementation 'com.squareup.leakcanary:leakcanary-android-release:2.9.1'
     // Optional: detect retained objects. This helps but is not required.
