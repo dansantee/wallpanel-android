@@ -405,6 +405,6 @@ constructor(private val context: Context, private val sharedPreferences: SharedP
         private val PREF_CAMERA_MOTION_LATENCY = "pref_camera_motion_latency"
         private val PREF_WEB_SCREENSAVER_URL = "pref_web_screensaver_url"
         private val PREF_WEB_SCREENSAVER = "pref_web_screensaver"
-        const val WEB_SCREEN_SAVER = "https://wallpanel.xyz"
+        const val WEB_SCREEN_SAVER = "about:blank"
     }
 }

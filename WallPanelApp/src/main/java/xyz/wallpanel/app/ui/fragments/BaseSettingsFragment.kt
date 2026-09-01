@@ -119,6 +119,6 @@ open class BaseSettingsFragment : PreferenceFragmentCompat(), SharedPreferences.
 
 
     companion object {
-        const val SUPPORT_URL: String = "https://wallpanel.xyz/"
+        const val SUPPORT_URL: String = AboutFragment.PROJECT_URL
     }
 }// Required empty public constructor

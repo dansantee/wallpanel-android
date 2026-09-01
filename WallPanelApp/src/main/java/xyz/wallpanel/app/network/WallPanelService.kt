@@ -827,7 +827,7 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
         }
         originDef.put("name", "WallPanel")
         originDef.put("sw", version)
-        originDef.put("url", "https://wallpanel.xyz")
+        originDef.put("url", "https://github.com/dansantee/wallpanel-android")
         discoveryDef.put("origin", originDef)
         discoveryDef.put("state_topic", "${configuration.mqttBaseTopic}${stateTopic}")
         if (unit != null) {
@@ -862,7 +862,7 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
         }
         originDef.put("name", "WallPanel")
         originDef.put("sw", version)
-        originDef.put("url", "https://wallpanel.xyz")
+        originDef.put("url", "https://github.com/dansantee/wallpanel-android")
         discoveryDef.put("origin", originDef)
         discoveryDef.put("state_topic", "${configuration.mqttBaseTopic}${stateTopic}")
         discoveryDef.put("payload_on", true)

@@ -82,19 +82,14 @@ class AboutFragment : Fragment() {
             Timber.e(e.message)
         }
 
-        binding.sendFeedbackButton.setOnClickListener { feedback() }
-        binding.rateApplicationButton.setOnClickListener { rate() }
+        // This fork has no Play listing, no support site, no privacy policy and no maintainer
+        // mailbox, so the buttons that pointed at the original project's are hidden rather than
+        // left to open someone else's pages.
+        binding.sendFeedbackButton.visibility = View.GONE
+        binding.rateApplicationButton.visibility = View.GONE
+        binding.privacyPolicyButton.visibility = View.GONE
         binding.githubButton.setOnClickListener { showGitHub() }
         binding.supportButton.setOnClickListener { showSupport() }
-        binding.privacyPolicyButton.setOnClickListener { showPrivacyPolicy() }
-    }
-
-    private fun rate() {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + GOOGLE_PLAY_RATING)))
-        } catch (ex: android.content.ActivityNotFoundException) {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + GOOGLE_PLAY_RATING)))
-        }
     }
 
     private fun showSupport() {
@@ -105,24 +100,12 @@ class AboutFragment : Fragment() {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_URL)))
     }
 
-    private fun showPrivacyPolicy() {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
-    }
-
-    private fun feedback() {
-        val email = Intent(Intent.ACTION_SENDTO)
-        email.type = "text/email"
-        email.data = Uri.parse("mailto:" + EMAIL_ADDRESS)
-        email.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.mail_to_subject_text) + " " + versionNumber)
-        startActivity(Intent.createChooser(email, getString(R.string.mail_subject_text)))
-    }
-
     companion object {
-        const val SUPPORT_URL:String = "https://wallpanel.xyz"
-        const val GOOGLE_PLAY_RATING = "xyz.wallpanel.app"
-        const val GITHUB_URL = "https://github.com/TheTimeWalker/wallpanel-android"
-        const val EMAIL_ADDRESS = "tony+wallpanel@stipanic.ch"
-        const val PRIVACY_POLICY_URL = "https://wallpanel.xyz/privacy-policy"
+        // This fork's own repository. Upstream is archived and its site, Play listing and
+        // maintainer mailbox are not ours to send users to.
+        const val PROJECT_URL = "https://github.com/dansantee/wallpanel-android"
+        const val SUPPORT_URL: String = PROJECT_URL
+        const val GITHUB_URL = PROJECT_URL
 
         fun newInstance(): AboutFragment {
             return AboutFragment()
