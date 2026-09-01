@@ -90,7 +90,13 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver, WebClien
 
         super.onCreate(savedInstanceState)
 
-        if (BuildConfig.DEBUG) {
+        // Seed the developer's own broker/dashboard into settings on every launch. This is a
+        // convenience for the `dev` flavor ONLY: it must not run in a `prod` build, because the
+        // prod flavor hardcodes BROKER/HASS_URL/etc. to empty strings, so running it there wipes
+        // the user's real launch URL and MQTT credentials every single time the app starts.
+        // BuildConfig.DEBUG is the wrong guard for that -- a prodDebug build (which is what you
+        // get when sideloading an unsigned local build) has DEBUG == true but prod's empty values.
+        if (BuildConfig.DEBUG && BuildConfig.BASE_ENVIRONMENT == "DEV_ENVIRONMENT") {
             configuration.mqttBroker = BuildConfig.BROKER
             configuration.mqttUsername = BuildConfig.BROKER_USERNAME
             configuration.mqttPassword = BuildConfig.BROKER_PASS

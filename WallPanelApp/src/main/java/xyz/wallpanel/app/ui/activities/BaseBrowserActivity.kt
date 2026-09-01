@@ -73,6 +73,8 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
     var wallPanelService: Intent? = null
     private var decorView: View? = null
     private val inactivityHandler: Handler = Handler(Looper.getMainLooper())
+    private val immersiveHandler: Handler = Handler(Looper.getMainLooper())
+    private val immersiveRunnable = Runnable { applyImmersiveMode() }
     private var userPresent: Boolean = false
     private var hasWakeScreen = false
     var displayProgress = true
@@ -163,6 +165,7 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
     override fun onResume() {
         super.onResume()
         applyImmersiveMode()
+        scheduleImmersiveReapply()
         val filter = IntentFilter()
         filter.addAction(BROADCAST_ACTION_LOAD_URL)
         filter.addAction(BROADCAST_ACTION_JS_EXEC)
@@ -183,6 +186,7 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
     }
 
     override fun onPause() {
+        immersiveHandler.removeCallbacks(immersiveRunnable)
         super.onPause()
         val bm = LocalBroadcastManager.getInstance(this)
         bm.unregisterReceiver(mBroadcastReceiver)
@@ -221,6 +225,7 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
 
     override fun onUserInteraction() {
         onWindowFocusChanged(true)
+        scheduleImmersiveReapply()
         Timber.d("onUserInteraction")
         if (!userPresent) {
             userPresent = true
@@ -300,6 +305,23 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
             } else {
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_VISIBLE
             }
+        }
+    }
+
+    /**
+     * Re-hide the system bars repeatedly over the next second and a half.
+     *
+     * A single applyImmersiveMode() call is not enough on wake: the system reveals the transient
+     * bars *after* the touch that triggered the wake is delivered, so a hide issued from
+     * onUserInteraction/onResume runs too early and the bars appear anyway. Re-issuing it a few
+     * times across the window in which the system might reveal them is what actually removes the
+     * flash. Posting the same Runnable instance means removeCallbacks cancels every pending copy.
+     */
+    private fun scheduleImmersiveReapply() {
+        if (!configuration.fullScreen) return
+        immersiveHandler.removeCallbacks(immersiveRunnable)
+        for (delay in longArrayOf(100L, 250L, 500L, 800L, 1200L, 1600L)) {
+            immersiveHandler.postDelayed(immersiveRunnable, delay)
         }
     }
 
