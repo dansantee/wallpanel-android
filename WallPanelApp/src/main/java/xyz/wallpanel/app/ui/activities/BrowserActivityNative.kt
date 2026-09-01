@@ -131,6 +131,24 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver, WebClien
         initWebPageLoad()
     }
 
+    /**
+     * Back must never finish this activity.
+     *
+     * WallPanel is set as the device launcher, so finishing the home activity leaves the system
+     * with nowhere to go and Samsung drops the user on the lock screen. There was previously no
+     * back handling at all here, so Back fell through to the default finish() and did exactly that.
+     *
+     * Instead: walk the WebView history if there is any, otherwise reload the dashboard.
+     */
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (this::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            initWebPageLoad()
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         if (configuration.useDarkTheme) {
